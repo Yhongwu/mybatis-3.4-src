@@ -182,8 +182,7 @@ public class Configuration {
      * references a cache bound to another namespace and the value is the
      * namespace which the actual cache is bound to.
      *
-     * 其中 key 是
-     * <cache-ref> 节点所在的 namespace , value 是 ＜cache-ref> 节点的 namespace 属性所指 定的
+     * 其中 key 是<cache-ref> 节点所在的 namespace , value 是 ＜cache-ref> 节点的 namespace 属性所指定的
      * namespace。也就是说，前者共用后者的 Cache 对象
      */
     protected final Map<String, String> cacheRefMap = new HashMap<String, String>();

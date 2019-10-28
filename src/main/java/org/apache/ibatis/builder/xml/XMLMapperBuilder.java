@@ -135,9 +135,9 @@ public class XMLMapperBuilder extends BaseBuilder {
             parameterMapElement(context.evalNodes("/mapper/parameterMap"));
             // 解析resultMap节点
             resultMapElements(context.evalNodes("/mapper/resultMap"));
-            // 解析sql节点
+            // 解析sql节点 <sql>用于保存sql片段 有databaseId属性 用于标明数据库厂商
             sqlElement(context.evalNodes("/mapper/sql"));
-            // 解析select|insert|update|delete节点
+            // 解析select|insert|update|delete节点 这里暂且简称Statement节点
             buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
         } catch (Exception e) {
             throw new BuilderException("Error parsing Mapper XML. Cause: " + e, e);
@@ -146,6 +146,7 @@ public class XMLMapperBuilder extends BaseBuilder {
 
     private void buildStatementFromContext(List<XNode> list) {
         if (configuration.getDatabaseId() != null) {
+            // 用重载方法构建 Statement
             buildStatementFromContext(list, configuration.getDatabaseId());
         }
         buildStatementFromContext(list, null);
@@ -153,10 +154,13 @@ public class XMLMapperBuilder extends BaseBuilder {
 
     private void buildStatementFromContext(List<XNode> list, String requiredDatabaseId) {
         for (XNode context : list) {
+            // 创建 Statement 建造类
             final XMLStatementBuilder statementParser = new XMLStatementBuilder(configuration, builderAssistant, context, requiredDatabaseId);
             try {
+                // 解析Statement并存到Configuration的mappedStatements
                 statementParser.parseStatementNode();
             } catch (IncompleteElementException e) {
+                // 解析失败，将解析器放入 configuration 的 incompleteStatements 集合中
                 configuration.addIncompleteStatement(statementParser);
             }
         }
@@ -209,7 +213,17 @@ public class XMLMapperBuilder extends BaseBuilder {
 
     /**
      * 如果我们希望多个 namespace 共用同 一个二级缓存，
-     * 即同一个 Cache 对象，则可以使用＜cache-ref>节点进行配置。
+     * 即同一个 Cache 对象，则可以使用<cache-ref>节点进行配置。
+     *
+     * <mapper namespace="com.yhw.blog.dao.Mapper1">
+     *     <!-- Mapper1 与 Mapper2 共用一个二级缓存 -->
+     *     <cache-ref namespace="com.yhw.blog.dao.Mapper2"/>
+     * </mapper>
+     *
+     * <!-- Mapper2.xml -->
+     * <mapper namespace="com.yhw.blog.dao.Mapper2">
+     *     <cache/>
+     * </mapper>
      * @param context
      */
     private void cacheRefElement(XNode context) {
@@ -263,7 +277,7 @@ public class XMLMapperBuilder extends BaseBuilder {
             boolean blocking = context.getBooleanAttribute("blocking", false);
             // 获取<cache>节点下的子节点，将用于初始化二级缓存
             Properties props = context.getChildrenAsProperties();
-            // 通过 MapperBuilderAssistant 创建 Cache 对象，并添加到 Configuration . caches 集合中保存
+            // 通过 MapperBuilderAssistant 创建 Cache 对象，并添加到 Configuration.caches 集合中保存
             builderAssistant.useNewCache(typeClass, evictionClass, flushInterval, size, readWrite, blocking, props);
         }
     }
@@ -396,32 +410,59 @@ public class XMLMapperBuilder extends BaseBuilder {
 
     private void sqlElement(List<XNode> list) throws Exception {
         if (configuration.getDatabaseId() != null) {
+            // 调用 sqlElement 解析 <sql> 节点
             sqlElement(list, configuration.getDatabaseId());
         }
+        // DatabaseId为null则再次调用 sqlElement 解析 <sql> 节点
         sqlElement(list, null);
     }
 
     private void sqlElement(List<XNode> list, String requiredDatabaseId) throws Exception {
         for (XNode context : list) {
+            // 获取 id 和 databaseId 属性
             String databaseId = context.getStringAttribute("databaseId");
             String id = context.getStringAttribute("id");
+            // id = currentNamespace + "." + id
             id = builderAssistant.applyCurrentNamespace(id, false);
+            // 检测当前 databaseId 和 requiredDatabaseId 是否一致
             if (databaseIdMatchesCurrent(id, databaseId, requiredDatabaseId)) {
+                // 将 <id, XNode> 键值对缓存到 sqlFragments 中
                 sqlFragments.put(id, context);
             }
         }
     }
 
+    /**
+     * requiredDatabaseId和databaseId是否匹配
+     * @param id
+     * @param databaseId
+     * @param requiredDatabaseId
+     * @return
+     */
     private boolean databaseIdMatchesCurrent(String id, String databaseId, String requiredDatabaseId) {
+        //<!-- databaseId 不为空 -->
+        //<sql id="table" databaseId="mysql">
+        //    student
+        //</sql>
+        //
+        //<!-- databaseId 为空 -->
+        //<sql id="table">
+        //    student
+        //</sql>
+        /**假设有这两个 第一个先被保存到sqlFragments了，而第二个保存的时候 发现已存在，且这次的requiredDatabaseId 为空，上次保存的DatabaseId不为空
+         * 则返回false，不会保存到sqlFragments**/
         if (requiredDatabaseId != null) {
+            // 不一样 返回false
             if (!requiredDatabaseId.equals(databaseId)) {
                 return false;
             }
         } else {
+            // 一个为null 一个不为null 返回false
             if (databaseId != null) {
                 return false;
             }
             // skip this fragment if there is a previous one with a not null databaseId
+            // 如果sql节点已经存在 且已存在的那个的databaseId不为null 返回false
             if (this.sqlFragments.containsKey(id)) {
                 XNode context = this.sqlFragments.get(id);
                 if (context.getStringAttribute("databaseId") != null) {

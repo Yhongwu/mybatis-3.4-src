@@ -61,7 +61,7 @@ public class ResultMapping {
      */
     private String nestedResultMapId;
     /**
-     * 对应节点的 select 属性，该属性通过工d 引用了另一个 ＜ select＞节点定义，它会把指定的列的位传入 345543
+     * 对应节点的 select 属性，该属性通过id 引用了另一个<select></>节点定义，它会把指定的列的位传入
      * select 属性指定的 select 语句中作为参数进行查询。 使用 select 属性可能会导致 N+l 问题
      */
     private String nestedQueryId;
@@ -78,7 +78,7 @@ public class ResultMapping {
      */
     private List<ResultFlag> flags;
     /**
-     * 对应节点的 column ,属性拆分后生成的结果， composites . size () >0 会使 column 为 null
+     * 对应节点的 column ,属性拆分后生成的结果， composites.size () >0 会使 column 为 null
      */
     private List<ResultMapping> composites;
     /**

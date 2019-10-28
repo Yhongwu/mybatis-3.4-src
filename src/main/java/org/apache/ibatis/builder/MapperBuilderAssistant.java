@@ -197,7 +197,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
             Discriminator discriminator,
             List<ResultMapping> resultMappings,
             Boolean autoMapping) {
-        // ResultMap 的完整 id 足”namespace . id ”的格式
+        // ResultMap 的完整 id 足"namespace.id"的格式
         id = applyCurrentNamespace(id, false);
         // 获取被继承的 ResultMap 的完整 id ，也就是父 ResultMap 对象的完整 id
         extend = applyCurrentNamespace(extend, true);
@@ -210,18 +210,20 @@ public class MapperBuilderAssistant extends BaseBuilder {
             ResultMap resultMap = configuration.getResultMap(extend);
             // 获取父 ResultMap 对象中记录的 ResultMapping 集合
             List<ResultMapping> extendedResultMappings = new ArrayList<ResultMapping>(resultMap.getResultMappings());
-            // 删 除需要覆盖的 ResultMapping 集合
+            // 删除需要覆盖的 ResultMapping 集合
             extendedResultMappings.removeAll(resultMappings);
             // Remove parent constructor if this resultMap declares a constructor.
-            // 如采 当前＜ resultMap ＞ 节点中定 义了 ＜ constructor＞节点，则不需妥使用父 ResultMap 中记录
-            // 的相应＜ constructor ＞节点，则将其对应的 ResultMapping 对象删除
+            // 如果当前<resultMap>节点中定义了<constructor>节点，则不需要使用父 ResultMap 中记录
+            // 的相应<constructor>节点，则将其对应的 ResultMapping 对象删除
             boolean declaresConstructor = false;
             for (ResultMapping resultMapping : resultMappings) {
+                //  检测当前 resultMappings 集合中是否包含 CONSTRUCTOR 标志的元素
                 if (resultMapping.getFlags().contains(ResultFlag.CONSTRUCTOR)) {
                     declaresConstructor = true;
                     break;
                 }
             }
+            // 如果当前 <resultMap> 节点中包含 <constructor> 子节点，则将拓展 ResultMapping 集合中的包含 CONSTRUCTOR 标志的元素移除
             if (declaresConstructor) {
                 Iterator<ResultMapping> extendedResultMappingsIter = extendedResultMappings.iterator();
                 while (extendedResultMappingsIter.hasNext()) {
@@ -232,6 +234,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
             }
             resultMappings.addAll(extendedResultMappings);
         }
+        // 构建 ResultMap
         ResultMap resultMap = new ResultMap.Builder(configuration, id, type, resultMappings, autoMapping)
                 .discriminator(discriminator)
                 .build();

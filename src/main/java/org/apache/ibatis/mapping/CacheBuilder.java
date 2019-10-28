@@ -41,7 +41,7 @@ import org.apache.ibatis.reflection.SystemMetaObject;
 public class CacheBuilder {
     // Cache 对象的唯一标识， 一般情况下对应映射文件中的配置 namespace
     private String id;
-    // Cache 接口的真正实现类，默认位是前面介绍的 PerpetualCache
+    // Cache 接口的真正实现类，默认位是 PerpetualCache
     private Class<? extends Cache> implementation;
     //  装饰器集合，默认只包含 LruCache . class
     private List<Class<? extends Cache>> decorators;
@@ -103,7 +103,7 @@ public class CacheBuilder {
      * @return
      */
     public Cache build() {
-        // 如果implementation 字段和 decorators 集合为空，则为其设立默认佳， implementation 默认
+        // 如果implementation 字段和 decorators 集合为空，则为其设立默认值， implementation 默认
         // 是 PerpetualCache.class, decorators 集合，默认只包含LruCache.class，即设置默认的缓存类型和装饰器
         setDefaultImplementations();
         // 根据 implementation 指定的类型 ，通过反射获取参数为 String 类型的构造方法，并通过该构造方法创建 Cache 对象
@@ -155,7 +155,7 @@ public class CacheBuilder {
                 metaCache.setValue("size", size);
             }
             if (clearInterval != null) {
-                // clearInterval 不为空，应用 ScheduledCache 装饰器
+                // clearInterval 不为空，应用 ScheduledCache 装饰器 默认周期性清除缓存
                 cache = new ScheduledCache(cache);
                 ((ScheduledCache) cache).setClearInterval(clearInterval);
             }

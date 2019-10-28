@@ -41,12 +41,18 @@ public class XMLIncludeTransformer {
         this.builderAssistant = builderAssistant;
     }
 
+    /**
+     * 解析include节点
+     * @param source
+     */
     public void applyIncludes(Node source) {
         Properties variablesContext = new Properties();
         Properties configurationVariables = configuration.getVariables();
         if (configurationVariables != null) {
+            // 将 configurationVariables 中的数据(全局配置)添加到 variablesContext 中
             variablesContext.putAll(configurationVariables);
         }
+        // 调用重载方法处理 <include> 节点 将全局配置variablesContext传给applyIncludes 防止在方法周中添加了配置污染原来的全局配置
         applyIncludes(source, variablesContext, false);
     }
 
@@ -57,8 +63,17 @@ public class XMLIncludeTransformer {
      */
     private void applyIncludes(Node source, final Properties variablesContext, boolean included) {
         if (source.getNodeName().equals("include")) {
+            // 获取 <sql> 节点。若 refid 中包含属性占位符 ${}, 则需先将属性占位符替换为对应的属性值
             Node toInclude = findSqlFragment(getStringAttribute(source, "refid"), variablesContext);
+            // 解析 <include> 的子节点 <property>，并将解析结果与 variablesContext 融合，
+            // 然后返回融合后的 Properties。若 <property> 节点的 value 属性中存在占位符 ${}，
+            // 则将占位符替换为对应的属性值
             Properties toIncludeContext = getVariablesContext(source, variablesContext);
+            //递归调用，用于将 <sql> 节点内容中出现的属性占位符 ${} 替换为对应的
+            //属性值。这里要注意一下递归调用的参数：
+            // - toInclude：<sql> 节点对象
+            // - toIncludeContext：<include> 子节点 <property> 的解析结果与
+            //                     全局变量融合后的结果
             applyIncludes(toInclude, toIncludeContext, true);
             if (toInclude.getOwnerDocument() != source.getOwnerDocument()) {
                 toInclude = source.getOwnerDocument().importNode(toInclude, true);

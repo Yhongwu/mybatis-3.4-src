@@ -53,30 +53,42 @@ public class XMLStatementBuilder extends BaseBuilder {
         this.requiredDatabaseId = databaseId;
     }
 
+    /**
+     * 解析StatementNode
+     */
     public void parseStatementNode() {
+        // 获取id和databaseId属性
         String id = context.getStringAttribute("id");
         String databaseId = context.getStringAttribute("databaseId");
 
+        // 检测databaseId和requiredDatabaseId是否匹配 逻辑与sql节点解析的逻辑基本一致
         if (!databaseIdMatchesCurrent(id, databaseId, this.requiredDatabaseId)) {
             return;
         }
 
+        // 获取各种属性
         Integer fetchSize = context.getIntAttribute("fetchSize");
         Integer timeout = context.getIntAttribute("timeout");
         String parameterMap = context.getStringAttribute("parameterMap");
         String parameterType = context.getStringAttribute("parameterType");
+        // 通过别名解析parameterType类型
         Class<?> parameterTypeClass = resolveClass(parameterType);
         String resultMap = context.getStringAttribute("resultMap");
         String resultType = context.getStringAttribute("resultType");
         String lang = context.getStringAttribute("lang");
         LanguageDriver langDriver = getLanguageDriver(lang);
 
+        // 通过别名解析resultType类型
         Class<?> resultTypeClass = resolveClass(resultType);
         String resultSetType = context.getStringAttribute("resultSetType");
+        // StatementType：默认PREPARED类型 可选有STATEMENT, PREPARED, CALLABLE
         StatementType statementType = StatementType.valueOf(context.getStringAttribute("statementType", StatementType.PREPARED.toString()));
+        // 解析resultSetType
         ResultSetType resultSetTypeEnum = resolveResultSetType(resultSetType);
 
+        // 获取节点的名称，比如 <select> 节点名称为 select
         String nodeName = context.getNode().getNodeName();
+        // 根据节点名称解析 SqlCommandType
         SqlCommandType sqlCommandType = SqlCommandType.valueOf(nodeName.toUpperCase(Locale.ENGLISH));
         boolean isSelect = sqlCommandType == SqlCommandType.SELECT;
         boolean flushCache = context.getBooleanAttribute("flushCache", !isSelect);
@@ -84,13 +96,16 @@ public class XMLStatementBuilder extends BaseBuilder {
         boolean resultOrdered = context.getBooleanAttribute("resultOrdered", false);
 
         // Include Fragments before parsing
+        // 解析 <include> 节点
         XMLIncludeTransformer includeParser = new XMLIncludeTransformer(configuration, builderAssistant);
         includeParser.applyIncludes(context.getNode());
 
         // Parse selectKey after includes and remove them.
+        // 解析 <selectKey> 节点
         processSelectKeyNodes(id, parameterTypeClass, langDriver);
 
         // Parse the SQL (pre: <selectKey> and <include> were parsed and removed)
+        // 解析 SQL 语句
         SqlSource sqlSource = langDriver.createSqlSource(configuration, context, parameterTypeClass);
         String resultSets = context.getStringAttribute("resultSets");
         String keyProperty = context.getStringAttribute("keyProperty");
@@ -99,13 +114,15 @@ public class XMLStatementBuilder extends BaseBuilder {
         String keyStatementId = id + SelectKeyGenerator.SELECT_KEY_SUFFIX;
         keyStatementId = builderAssistant.applyCurrentNamespace(keyStatementId, true);
         if (configuration.hasKeyGenerator(keyStatementId)) {
+            // 获取 KeyGenerator 实例
             keyGenerator = configuration.getKeyGenerator(keyStatementId);
         } else {
+            // 创建 KeyGenerator 实例
             keyGenerator = context.getBooleanAttribute("useGeneratedKeys",
                     configuration.isUseGeneratedKeys() && SqlCommandType.INSERT.equals(sqlCommandType))
                     ? Jdbc3KeyGenerator.INSTANCE : NoKeyGenerator.INSTANCE;
         }
-
+        // 构建 MappedStatement 对象，并将该对象存储到Configuration 的 mappedStatements 集合中
         builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType,
                 fetchSize, timeout, parameterMap, parameterTypeClass, resultMap, resultTypeClass,
                 resultSetTypeEnum, flushCache, useCache, resultOrdered,
